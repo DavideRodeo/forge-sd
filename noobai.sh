@@ -25,7 +25,8 @@ EXTENSIONS=(
     "https://github.com/AlUlkesh/stable-diffusion-webui-images-browser"
     "https://github.com/hako-mikan/sd-webui-regional-prompter"
     "https://github.com/Coyote-A/ultimate-upscale-for-automatic1111"
-    "https://github.com/hinablue/sd-forge-adetailer/"
+    "https://github.com/hinablue/sd-forge-adetailer"
+    "https://github.com/tritant/sd-webui-creaprompt"
 )
 
 CHECKPOINT_MODELS=(
