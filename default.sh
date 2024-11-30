@@ -15,22 +15,28 @@ APT_PACKAGES=(
 )
 
 PIP_PACKAGES=(
-    "onnxruntime-gpu"
+    #"package-1"
+    #"package-2"
 )
 
 EXTENSIONS=(
+    "https://github.com/Mikubill/sd-webui-controlnet"
     "https://github.com/deforum-art/sd-webui-deforum"
     "https://github.com/adieyal/sd-dynamic-prompts"
     "https://github.com/ototadana/sd-face-editor"
     "https://github.com/AlUlkesh/stable-diffusion-webui-images-browser"
     "https://github.com/hako-mikan/sd-webui-regional-prompter"
     "https://github.com/Coyote-A/ultimate-upscale-for-automatic1111"
+    "https://github.com/Gourieff/sd-webui-reactor"
+    "https://github.com/Bing-su/adetailer"
+    "https://github.com/tritant/sd-webui-creaprompt"
+
 )
 
 CHECKPOINT_MODELS=(
     #"https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt"
     #"https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.ckpt"
-    "https://civitai.com/api/download/models/1022833?type=Model&format=SafeTensor&size=full&fp=fp16"
+    "https://huggingface.co/Laxhar/noobai-XL-1.0/resolve/main/NoobAI-XL-v1.0.safetensors"
 )
 
 LORA_MODELS=(
@@ -110,21 +116,28 @@ function provisioning_start() {
         PLATFORM_ARGS="--use-cpu all --skip-torch-cuda-test --no-half"
     fi
     PROVISIONING_ARGS="--skip-python-version-check --no-download-sd-model --do-not-download-clip --port 11404 --exit"
-    ARGS_COMBINED="${PLATFORM_ARGS} $(cat /etc/forge_args.conf) ${PROVISIONING_ARGS}"
+    ARGS_COMBINED="${PLATFORM_ARGS} $(cat /etc/a1111_webui_flags.conf) ${PROVISIONING_ARGS}"
     
     # Start and exit because webui will probably require a restart
-    cd /opt/stable-diffusion-webui-forge
-        source "$FORGE_VENV/bin/activate"
+    cd /opt/stable-diffusion-webui
+    if [[ -z $MAMBA_BASE ]]; then
+        source "$WEBUI_VENV/bin/activate"
         LD_PRELOAD=libtcmalloc.so python launch.py \
             ${ARGS_COMBINED}
         deactivate
-
-
+    else 
+        micromamba run -n webui -e LD_PRELOAD=libtcmalloc.so python launch.py \
+            ${ARGS_COMBINED}
+    fi
     provisioning_print_end
 }
 
 function pip_install() {
-    "$FORGE_VENV_PIP" install --no-cache-dir "$@"
+    if [[ -z $MAMBA_BASE ]]; then
+            "$WEBUI_VENV_PIP" install --no-cache-dir "$@"
+        else
+            micromamba run -n webui pip install --no-cache-dir "$@"
+        fi
 }
 
 function provisioning_get_apt_packages() {
@@ -142,7 +155,7 @@ function provisioning_get_pip_packages() {
 function provisioning_get_extensions() {
     for repo in "${EXTENSIONS[@]}"; do
         dir="${repo##*/}"
-        path="/opt/stable-diffusion-webui-forge/extensions/${dir}"
+        path="/opt/stable-diffusion-webui/extensions/${dir}"
         if [[ -d $path ]]; then
             # Pull only if AUTO_UPDATE
             if [[ ${AUTO_UPDATE,,} == "true" ]]; then
