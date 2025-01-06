@@ -13,7 +13,7 @@ PIP_PACKAGES=(
   )
 
 CHECKPOINT_MODELS=(
-    "https://civitai.com/models/277058?modelVersionId=1156226"
+    "https://civitai.com/api/download/models/1156226"
     #"https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
     #"https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors"
 )
