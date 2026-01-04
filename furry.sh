@@ -116,12 +116,7 @@ function provisioning_has_valid_hf_token() {
         -H "Authorization: Bearer $HF_TOKEN" \
         -H "Content-Type: application/json")
 
-    # Check if the token is valid
-    if [ "$response" -eq 200 ]; then
-        return 0
-    else
-        return 1
-    fi
+    [[ "$response" -eq 200 ]]
 }
 
 function provisioning_has_valid_civitai_token() {
@@ -132,26 +127,37 @@ function provisioning_has_valid_civitai_token() {
         -H "Authorization: Bearer $CIVITAI_TOKEN" \
         -H "Content-Type: application/json")
 
-    # Check if the token is valid
-    if [ "$response" -eq 200 ]; then
-        return 0
-    else
-        return 1
-    fi
+    [[ "$response" -eq 200 ]]
 }
 
-# Download from $1 URL to $2 file path
+# FIX: Download function rewritten to properly detect Civitai URLs and apply token
 function provisioning_download() {
-    if [[ -n $HF_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?huggingface\.co(/|$|\?) ]]; then
+    url="$1"
+    dest="$2"
+
+    mkdir -p "$dest"
+
+    # Detect provider
+    if [[ $url == https://huggingface.co/* || $url == https://*.huggingface.co/* ]]; then
         auth_token="$HF_TOKEN"
-    elif 
-        [[ -n $CIVITAI_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?civitai\.com(/|$|\?) ]]; then
+    elif [[ $url == https://civitai.com/* || $url == https://*.civitai.com/* ]]; then
         auth_token="$CIVITAI_TOKEN"
-    fi
-    if [[ -n $auth_token ]];then
-        wget --header="Authorization: Bearer $auth_token" -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
     else
-        wget -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
+        auth_token=""
+    fi
+
+    # Download with or without token
+    if [[ -n "$auth_token" ]]; then
+        echo "Downloading with token: $url"
+        wget --header="Authorization: Bearer $auth_token" \
+             --content-disposition \
+             --show-progress \
+             -P "$dest" "$url"
+    else
+        echo "Downloading without token: $url"
+        wget --content-disposition \
+             --show-progress \
+             -P "$dest" "$url"
     fi
 }
 
