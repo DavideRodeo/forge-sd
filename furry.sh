@@ -65,7 +65,9 @@ function provisioning_download() {
         echo "Tentativo $attempt di $max_retries..." | tee -a "$LOG_FILE"
 
         if [[ -n "$auth_token" ]]; then
-            wget --header="Authorization: Bearer $auth_token" \
+            wget --content-disposition \
+            "${url}?token=${auth_token}"
+
                  --trust-server-names \
                  -O "$outfile" \
                  "$url" 2>&1 | tee -a "$LOG_FILE"
