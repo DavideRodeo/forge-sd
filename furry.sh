@@ -12,7 +12,9 @@ PIP_PACKAGES=()
 CHECKPOINT_MODELS=(
     "https://civitai.com/api/download/models/1981743"
 )
-
+EXTENSIONS=(
+    "https://github.com/Haoming02/sd-forge-couple"
+)
 UNET_MODELS=()
 LORA_MODELS=()
 VAE_MODELS=()
@@ -147,6 +149,10 @@ function provisioning_start() {
     provisioning_get_files \
         "${FORGE_DIR}/models/Stable-diffusion" \
         "${CHECKPOINT_MODELS[@]}"
+
+    provisioning_get_files \
+        "${FORGE_DIR}/extensions" \
+        "${EXTENSIONS[@]}"
 
     echo "ATTENDO COMPLETAMENTO DOWNLOAD..." | tee -a "$LOG_FILE"
     wait
