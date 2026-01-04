@@ -10,7 +10,7 @@ APT_PACKAGES=()
 PIP_PACKAGES=()
 
 CHECKPOINT_MODELS=(
-    "https://civitai.com/api/download/models/3088920"
+    "https://civitai.com/api/download/models/1981743"
 )
 
 UNET_MODELS=()
