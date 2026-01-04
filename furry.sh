@@ -52,44 +52,50 @@ function provisioning_download() {
         auth_token=""
     fi
 
-    echo "Inizio download: $url" | tee -a "$LOG_FILE"
-
-    # Force a safe filename based on the URL (before ?token)
-    filename=$(basename "${url%%\?*}")
-    outfile="$dest/$filename"
+    echo "Inizio download: $url"
 
     max_retries=3
     attempt=1
 
     while (( attempt <= max_retries )); do
-        echo "Tentativo $attempt di $max_retries..." | tee -a "$LOG_FILE"
+        echo "Tentativo $attempt di $max_retries..."
 
         if [[ -n "$auth_token" ]]; then
-            # Civitai requires token in query string for modelVersionId downloads
-            wget --content-disposition \
-                 -O "$outfile" \
-                 "${url}?token=${auth_token}" \
-                 2>&1 | tee -a "$LOG_FILE"
+            # Civitai → token nella query string (necessario per modelVersionId)
+            if [[ $url == https://civitai.com/* ]]; then
+                wget --content-disposition \
+                     -P "$dest" \
+                     "${url}?token=${auth_token}" \
+                     2>&1
+            else
+                # HuggingFace → token via header
+                wget --header="Authorization: Bearer $auth_token" \
+                     --content-disposition \
+                     -P "$dest" \
+                     "$url" \
+                     2>&1
+            fi
         else
             wget --content-disposition \
-                 -O "$outfile" \
+                 -P "$dest" \
                  "$url" \
-                 2>&1 | tee -a "$LOG_FILE"
+                 2>&1
         fi
 
         if [[ $? -eq 0 ]]; then
-            echo "Download completato!" | tee -a "$LOG_FILE"
+            echo "Download completato!"
             return 0
         fi
 
-        echo "Download fallito, ritento..." | tee -a "$LOG_FILE"
+        echo "Download fallito, ritento..."
         sleep $((attempt * 2))
         ((attempt++))
     done
 
-    echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi" | tee -a "$LOG_FILE"
+    echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi"
     return 1
 }
+
 
 
 ##############################################
