@@ -234,10 +234,6 @@ function provisioning_download() {
 
     echo "Inizio download: $url"
 
-    # Extract safe filename (before ?token)
-    filename=$(basename "${url%%\?*}")
-    outfile="$dest/$filename"
-
     max_retries=3
     attempt=1
 
@@ -245,22 +241,21 @@ function provisioning_download() {
         echo "Tentativo $attempt di $max_retries..."
 
         if [[ -n "$auth_token" ]]; then
-            # Civitai richiede il token nella query string per i modelVersionId
             if [[ $url == https://civitai.com/* ]]; then
                 wget --content-disposition \
-                     -O "$outfile" \
+                     -P "$dest" \
                      "${url}?token=${auth_token}" \
                      2>&1
             else
                 wget --header="Authorization: Bearer $auth_token" \
                      --content-disposition \
-                     -O "$outfile" \
+                     -P "$dest" \
                      "$url" \
                      2>&1
             fi
         else
             wget --content-disposition \
-                 -O "$outfile" \
+                 -P "$dest" \
                  "$url" \
                  2>&1
         fi
@@ -278,6 +273,7 @@ function provisioning_download() {
     echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi"
     return 1
 }
+
 
 
 # Allow user to disable provisioning if they started with a script they didn't want
