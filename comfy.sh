@@ -22,6 +22,8 @@ NODES=(
     "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation"
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
     "https://github.com/Artificial-Sweetener/comfyui-WhiteRabbit"
+    "https://github.com/city96/ComfyUI-GGUF"
+    "https://github.com/kael558/ComfyUI-GGUF-FantasyTalking"
 )
 
 WORKFLOWS=(
