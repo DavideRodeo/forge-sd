@@ -98,6 +98,23 @@ function provisioning_download() {
     return 1
 }
 
+function provisioning_get_extensions() {
+    dir="${FORGE_DIR}/extensions"
+    mkdir -p "$dir"
+
+    for repo in "${EXTENSIONS[@]}"; do
+        name=$(basename "$repo")
+        path="${dir}/${name}"
+
+        if [[ -d "$path" ]]; then
+            echo "Aggiorno estensione: $name"
+            (cd "$path" && git pull)
+        else
+            echo "Clono estensione: $name"
+            git clone "$repo" "$path" --recursive
+        fi
+    done
+}
 
 
 ##############################################
@@ -150,9 +167,7 @@ function provisioning_start() {
         "${FORGE_DIR}/models/Stable-diffusion" \
         "${CHECKPOINT_MODELS[@]}"
 
-    provisioning_get_files \
-        "${FORGE_DIR}/extensions" \
-        "${EXTENSIONS[@]}"
+    provisioning_get_extensions
 
     echo "ATTENDO COMPLETAMENTO DOWNLOAD..." | tee -a "$LOG_FILE"
     wait
