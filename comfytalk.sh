@@ -24,6 +24,8 @@ NODES=(
     "https://github.com/Artificial-Sweetener/comfyui-WhiteRabbit"
     "https://github.com/city96/ComfyUI-GGUF"
     "https://github.com/kael558/ComfyUI-GGUF-FantasyTalking"
+    "https://github.com/kijai/ComfyUI-WanVideoWrapper"
+    "https://github.com/kijai/ComfyUI-MelBandRoFormer"
 )
 
 WORKFLOWS=(
@@ -43,18 +45,20 @@ TEXT_ENCODERS=(
 )
 
 DIFFUSION_MODELS=(
-    "https://civitai.com/api/download/models/2466604"
-    "https://civitai.com/api/download/models/2466822"
+    "https://huggingface.co/city96/Wan2.1-I2V-14B-480P-gguf/blob/main/wan2.1-i2v-14b-480p-Q8_0.gguf"
+    "https://huggingface.co/Kijai/WanVideo_comfy_GGUF/blob/main/InfiniteTalk/Wan2_1-InfiniteTalk_Single_Q8.gguf"
+    
 )
 
 CLIP_MODELS=(
-    
+    "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/blob/main/split_files/clip_vision/clip_vision_h.safetensors"
 )
 
 UNET_MODELS=(
 )
 
 LORA_MODELS=(
+    "https://huggingface.co/Kijai/WanVideo_comfy/blob/main/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank128_bf16.safetensors"
 )
 
 VAE_MODELS=(
