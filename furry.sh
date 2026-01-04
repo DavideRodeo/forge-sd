@@ -18,7 +18,7 @@ EXTENSIONS=(
     "https://github.com/Bing-su/adetailer.git"
     "https://github.com/Amadeus-AI/img2img-hires-fix.git"
     "https://github.com/MINENEMA/sd-webui-quickrecents.git"
-    "https://github.com/altoiddealer/--sd-webui-ar-plusplus"
+    "https://github.com/altoiddealer/--sd-webui-ar-plusplus.git"
 )
 UNET_MODELS=()
 LORA_MODELS=()
