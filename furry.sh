@@ -37,59 +37,7 @@ function provisioning_has_valid_civitai_token() {
 # DOWNLOAD WITH RETRY + TOKEN + FILENAME FIX
 ##############################################
 
-function provisioning_download() {
-    url="$1"
-    dest="$2"
-
-    mkdir -p "$dest"
-
-    # Detect provider
-    if [[ $url == https://huggingface.co/* || $url == https://*.huggingface.co/* ]]; then
-        auth_token="$HF_TOKEN"
-    elif [[ $url == https://civitai.com/* || $url == https://*.civitai.com/* ]]; then
-        auth_token="$CIVITAI_TOKEN"
-    else
-        auth_token=""
-    fi
-
-    echo "Inizio download: $url" | tee -a "$LOG_FILE"
-
-    # Extract a safe filename (avoid long AWS URLs)
-    filename=$(basename "${url%%\?*}")
-    outfile="$dest/$filename"
-
-    max_retries=3
-    attempt=1
-
-    while (( attempt <= max_retries )); do
-        echo "Tentativo $attempt di $max_retries..." | tee -a "$LOG_FILE"
-
-        if [[ -n "$auth_token" ]]; then
-            wget --content-disposition \
-            "${url}?token=${auth_token}"
-
-                 --trust-server-names \
-                 -O "$outfile" \
-                 "$url" 2>&1 | tee -a "$LOG_FILE"
-        else
-            wget --trust-server-names \
-                 -O "$outfile" \
-                 "$url" 2>&1 | tee -a "$LOG_FILE"
-        fi
-
-        if [[ $? -eq 0 ]]; then
-            echo "Download completato!" | tee -a "$LOG_FILE"
-            return 0
-        fi
-
-        echo "Download fallito, ritento..." | tee -a "$LOG_FILE"
-        sleep $((attempt * 2))
-        ((attempt++))
-    done
-
-    echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi" | tee -a "$LOG_FILE"
-    return 1
-}
+Sì, patchami la funzione
 
 
 ##############################################
