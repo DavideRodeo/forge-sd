@@ -14,6 +14,7 @@ CHECKPOINT_MODELS=(
 )
 EXTENSIONS=(
     "https://github.com/Haoming02/sd-forge-couple"
+    "https://github.com/AlUlkesh/stable-diffusion-webui-images-browser.git"
 )
 UNET_MODELS=()
 LORA_MODELS=()
