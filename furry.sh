@@ -54,7 +54,7 @@ function provisioning_download() {
 
     echo "Inizio download: $url" | tee -a "$LOG_FILE"
 
-    # Extract a safe filename
+    # Extract a safe filename (avoid long AWS URLs)
     filename=$(basename "${url%%\?*}")
     outfile="$dest/$filename"
 
@@ -88,6 +88,7 @@ function provisioning_download() {
     echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi" | tee -a "$LOG_FILE"
     return 1
 }
+
 
 ##############################################
 # GENERIC HELPERS
