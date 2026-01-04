@@ -10,7 +10,7 @@ APT_PACKAGES=()
 PIP_PACKAGES=()
 
 CHECKPOINT_MODELS=(
-    "https://civitai.com/api/download/models/1981743?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+    "https://civitai.com/api/download/models/3088920"
 )
 
 UNET_MODELS=()
