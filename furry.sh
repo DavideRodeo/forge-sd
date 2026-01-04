@@ -34,7 +34,7 @@ function provisioning_has_valid_civitai_token() {
 }
 
 ##############################################
-# DOWNLOAD WITH RETRY + TOKEN + REDIRECT FIX
+# DOWNLOAD WITH RETRY + TOKEN + FILENAME FIX
 ##############################################
 
 function provisioning_download() {
@@ -54,6 +54,10 @@ function provisioning_download() {
 
     echo "Inizio download: $url" | tee -a "$LOG_FILE"
 
+    # Extract a safe filename
+    filename=$(basename "${url%%\?*}")
+    outfile="$dest/$filename"
+
     max_retries=3
     attempt=1
 
@@ -63,14 +67,12 @@ function provisioning_download() {
         if [[ -n "$auth_token" ]]; then
             wget --header="Authorization: Bearer $auth_token" \
                  --trust-server-names \
-                 --content-disposition \
-                 --show-progress \
-                 -P "$dest" "$url" 2>&1 | tee -a "$LOG_FILE"
+                 -O "$outfile" \
+                 "$url" 2>&1 | tee -a "$LOG_FILE"
         else
             wget --trust-server-names \
-                 --content-disposition \
-                 --show-progress \
-                 -P "$dest" "$url" 2>&1 | tee -a "$LOG_FILE"
+                 -O "$outfile" \
+                 "$url" 2>&1 | tee -a "$LOG_FILE"
         fi
 
         if [[ $? -eq 0 ]]; then
@@ -107,7 +109,7 @@ function provisioning_get_files() {
 }
 
 function provisioning_print_header() {
-    printf "\n##############################################\n#                                            #\n#          Provisioning container            #\n#                                            #\n#         This will take some time           #\n#                                            #\n# Your container will be ready on completion #\n#                                            #\n##############################################\n\n"
+    printf "\n##############################################\n#                                            #\n#          Provisioning container            #\n#                                            #\n#         Questo richiederà un po' di tempo  #\n#                                            #\n# Il container sarà pronto al termine         #\n#                                            #\n##############################################\n\n"
 }
 
 function provisioning_print_end() {
