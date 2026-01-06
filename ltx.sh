@@ -27,6 +27,7 @@ NODES=(
     "https://github.com/Lightricks/ComfyUI-LTXVideo"
     "https://github.com/ltdrdata/ComfyUI-Impact-Pack"
     "https://github.com/evanspearman/ComfyMath"
+    "https://github.com/ClownsharkBatwing/RES4LYF"
 )
 
 WORKFLOWS=(
