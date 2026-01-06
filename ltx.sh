@@ -35,16 +35,16 @@ INPUT=(
 )
 
 CHECKPOINT_MODELS=(
-
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev.safetensors"
 )
 
 TEXT_ENCODERS=(
 
-
+    "https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized"
 )
 
 DIFFUSION_MODELS=(
-    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev-fp8.safetensors"
+    
 
 )
 
@@ -52,6 +52,9 @@ CLIP_MODELS=(
     
 )
 
+LATENT_UPSCALE_MODELS=(
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors"
+)
 UNET_MODELS=(
 )
 
@@ -108,6 +111,9 @@ function provisioning_start() {
         "${COMFYUI_DIR}/models/esrgan" \
         "${ESRGAN_MODELS[@]}"
     provisioning_get_files \
+        "${COMFYUI_DIR}/models/latent_upscale_models" \
+        "${LATENT_UPSCALE_MODELS[@]}"
+    provisioning_get_files \
         "${COMFYUI_DIR}/models/text_encoders" \
         "${TEXT_ENCODERS[@]}"
     provisioning_print_end
@@ -127,16 +133,25 @@ function provisioning_get_pip_packages() {
 
 # We must be at release tag v0.3.34 or greater for fp8 support
 provisioning_update_comfyui() {
-    required_tag="v0.3.34"
     cd ${COMFYUI_DIR}
-    git fetch --all --tags
-    current_commit=$(git rev-parse HEAD)
-    required_commit=$(git rev-parse "$required_tag")
-    if git merge-base --is-ancestor "$current_commit" "$required_commit"; then
-        git checkout "$required_tag"
-        pip install --no-cache-dir -r requirements.txt
-    fi
+
+    echo "Aggiornamento ComfyUI alla versione nightly (master)..."
+
+    # Recupera tutto dal repository
+    git fetch --all
+
+    # Passa al branch master (nightly)
+    git checkout master
+
+    # Aggiorna all'ultima commit
+    git pull
+
+    # Installa le dipendenze aggiornate
+    pip install --no-cache-dir -r requirements.txt
+
+    echo "ComfyUI aggiornato alla nightly!"
 }
+
 
 function provisioning_get_nodes() {
     for repo in "${NODES[@]}"; do
