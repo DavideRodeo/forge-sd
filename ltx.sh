@@ -98,6 +98,45 @@ git_with_retry() {
 }
 
 ##############################################
+# VALIDATORE FILE MODELLI
+##############################################
+
+provisioning_validate_model_file() {
+    local file="$1"
+
+    # File inesistente o vuoto
+    if [[ ! -s "$file" ]]; then
+        log_error "File corrotto o vuoto: $file"
+        return 1
+    fi
+
+    # Pointer Git LFS
+    if head -n 1 "$file" | grep -q "version https://git-lfs.github.com/spec"; then
+        log_error "File LFS non scaricato correttamente (pointer): $file"
+        return 1
+    fi
+
+    # HTML (download fallito)
+    if head -n 1 "$file" | grep -qi "<!DOCTYPE html"; then
+        log_error "File HTML ricevuto invece del modello (errore download): $file"
+        return 1
+    fi
+
+    # JSON (errore API)
+    if head -n 1 "$file" | grep -q "{"; then
+        if jq empty "$file" 2>/dev/null; then
+            log_error "File JSON ricevuto invece del modello (errore API): $file"
+            return 1
+        fi
+    fi
+
+    # Se arriva qui, il file sembra valido
+    log_info "File valido: $file"
+    return 0
+}
+
+
+##############################################
 # VALIDAZIONE TOKEN
 ##############################################
 
@@ -284,6 +323,12 @@ function provisioning_get_hf_repos() {
                 cd "$path"
                 git_with_retry "git pull per HF repo $name" git pull --rebase --autostash
                 git lfs pull
+
+                # Validazione modelli scaricati
+                for f in $(find . -type f -name "*.safetensors"); do
+                    provisioning_validate_model_file "$f" \
+                        || log_warn "Modello non valido in repo HF: $f"
+                done
             )
         else
             log_info "Clonazione repo HF: $repo"
@@ -293,6 +338,12 @@ function provisioning_get_hf_repos() {
                 cd "$name"
                 git lfs install
                 git lfs pull
+
+                # Validazione modelli scaricati
+                for f in $(find . -type f -name "*.safetensors"); do
+                    provisioning_validate_model_file "$f" \
+                        || log_warn "Modello non valido in repo HF: $f"
+                done
             )
         fi
     done
@@ -386,9 +437,17 @@ function provisioning_download() {
         local status=$?
 
         if [[ $status -eq 0 ]]; then
-            log_info "Download completato: $url"
-            return 0
-        fi
+    local downloaded_file
+    downloaded_file=$(ls -t "$dest" | head -n 1)
+
+if provisioning_validate_model_file "$dest/$downloaded_file"; then
+        log_info "Download completato e valido: $url"
+        return 0
+    else
+        log_warn "File non valido, ritento download: $url"
+    fi
+fi
+
 
         log_warn "Download fallito (exit $status) per $url, ritento..."
         sleep $((attempt * 2))
