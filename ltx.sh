@@ -269,22 +269,35 @@ function provisioning_get_hf_repos() {
         local name="${repo##*/}"
         local path="${dest}/${name}"
 
+        # Costruzione URL con token se disponibile
+        local clone_url="$repo"
+        if provisioning_has_valid_hf_token; then
+            clone_url="${repo/https:\/\//https:\/\/user:${HF_TOKEN}@}"
+            log_info "Uso token HF per clonare $name"
+        else
+            log_warn "Clonazione HF senza token valido: $repo"
+        fi
+
         if [[ -d "$path/.git" ]]; then
             log_info "Aggiornamento repo HF: $name"
             (
                 cd "$path"
                 git_with_retry "git pull per HF repo $name" git pull --rebase --autostash
+                git lfs pull
             )
         else
             log_info "Clonazione repo HF: $repo"
             (
                 cd "$dest"
-                # LFS skip in clonazione; se ti serve il full checkout puoi togliere la var
-                GIT_LFS_SKIP_SMUDGE=1 git_with_retry "git clone HF repo $name" git clone "$repo" "$name"
+                git_with_retry "git clone HF repo $name" git clone "$clone_url" "$name"
+                cd "$name"
+                git lfs install
+                git lfs pull
             )
         fi
     done
 }
+
 
 ##############################################
 # DOWNLOAD FILE SINGOLI
