@@ -51,7 +51,9 @@ LATENT_UPSCALE_MODELS=(
     "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors"
 )
 UNET_MODELS=()
-LORA_MODELS=()
+LORA_MODELS=(
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled-lora-384.safetensors"
+)
 VAE_MODELS=()
 ESRGAN_MODELS=()
 CONTROLNET_MODELS=()
