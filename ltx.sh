@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 source /venv/main/bin/activate
 COMFYUI_DIR=${WORKSPACE}/ComfyUI
@@ -28,7 +29,7 @@ NODES=(
     "https://github.com/ClownsharkBatwing/RES4LYF"
 )
 
-# NUOVO: repository HuggingFace da clonare con git
+# Repository HuggingFace da clonare come repo git
 HF_REPOS=(
     "https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized"
 )
@@ -41,7 +42,7 @@ CHECKPOINT_MODELS=(
 )
 
 TEXT_ENCODERS=(
-    # Vuoto: ora gestito da HF_REPOS
+    # Vuoto: gemma3 ora è gestito tramite HF_REPOS
 )
 
 DIFFUSION_MODELS=()
@@ -56,17 +57,98 @@ ESRGAN_MODELS=()
 CONTROLNET_MODELS=()
 
 ##############################################
+# LOGGING / UTILS
+##############################################
+
+LOG_PREFIX="[PROVISIONING]"
+
+log_info() {
+    echo "${LOG_PREFIX} [INFO]  $*"
+}
+
+log_warn() {
+    echo "${LOG_PREFIX} [WARN]  $*" >&2
+}
+
+log_error() {
+    echo "${LOG_PREFIX} [ERROR] $*" >&2
+}
+
+# Esegue un comando git con retry
+git_with_retry() {
+    local desc="$1"
+    shift
+    local max_retries=3
+    local attempt=1
+
+    while (( attempt <= max_retries )); do
+        log_info "$desc (tentativo $attempt/$max_retries)"
+        if "$@"; then
+            return 0
+        fi
+        log_warn "$desc fallito, ritento..."
+        sleep $((attempt * 2))
+        ((attempt++))
+    done
+
+    log_error "$desc fallito dopo $max_retries tentativi"
+    return 1
+}
+
+##############################################
+# VALIDAZIONE TOKEN
+##############################################
+
+function provisioning_has_valid_hf_token() {
+    [[ -n "${HF_TOKEN:-}" ]] || return 1
+    local url="https://huggingface.co/api/whoami-v2"
+
+    local response
+    response=$(curl -o /dev/null -s -w "%{http_code}" -X GET "$url" \
+        -H "Authorization: Bearer $HF_TOKEN" \
+        -H "Content-Type: application/json")
+
+    [[ "$response" -eq 200 ]]
+}
+
+function provisioning_has_valid_civitai_token() {
+    [[ -n "${CIVITAI_TOKEN:-}" ]] || return 1
+    local url="https://civitai.com/api/v1/models?hidden=1&limit=1"
+
+    local response
+    response=$(curl -o /dev/null -s -w "%{http_code}" -X GET "$url" \
+        -H "Authorization: Bearer $CIVITAI_TOKEN" \
+        -H "Content-Type: application/json")
+
+    [[ "$response" -eq 200 ]]
+}
+
+##############################################
 # FUNZIONI PRINCIPALI
 ##############################################
 
 function provisioning_start() {
     provisioning_print_header
+
+    # Log di stato token per debug
+    if provisioning_has_valid_hf_token; then
+        log_info "Token HuggingFace valido rilevato."
+    else
+        log_warn "Nessun token HuggingFace valido rilevato (o assente)."
+    fi
+
+    if provisioning_has_valid_civitai_token; then
+        log_info "Token Civitai valido rilevato."
+    else
+        log_warn "Nessun token Civitai valido rilevato (o assente)."
+    fi
+
     provisioning_get_apt_packages
     provisioning_update_comfyui
     provisioning_get_nodes
     provisioning_get_pip_packages
 
-    workflows_dir="${COMFYUI_DIR}/user/default/workflows"
+    local workflows_dir="${COMFYUI_DIR}/user/default/workflows"
     mkdir -p "${workflows_dir}"
 
     provisioning_get_files "${workflows_dir}" "${WORKFLOWS[@]}"
@@ -81,7 +163,7 @@ function provisioning_start() {
     provisioning_get_files "${COMFYUI_DIR}/models/esrgan" "${ESRGAN_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/latent_upscale_models" "${LATENT_UPSCALE_MODELS[@]}"
 
-    # NUOVO: clonazione repo HuggingFace
+    # Repo HuggingFace come text_encoders
     provisioning_get_hf_repos "${COMFYUI_DIR}/models/text_encoders" "${HF_REPOS[@]}"
 
     provisioning_print_end
@@ -92,14 +174,20 @@ function provisioning_start() {
 ##############################################
 
 function provisioning_get_apt_packages() {
-    if [[ -n $APT_PACKAGES ]]; then
-        sudo $APT_INSTALL ${APT_PACKAGES[@]}
+    if [[ ${#APT_PACKAGES[@]} -gt 0 ]]; then
+        log_info "Installazione pacchetti APT: ${APT_PACKAGES[*]}"
+        sudo $APT_INSTALL "${APT_PACKAGES[@]}"
+    else
+        log_info "Nessun pacchetto APT da installare."
     fi
 }
 
 function provisioning_get_pip_packages() {
-    if [[ -n $PIP_PACKAGES ]]; then
-        pip install --no-cache-dir ${PIP_PACKAGES[@]}
+    if [[ ${#PIP_PACKAGES[@]} -gt 0 ]]; then
+        log_info "Installazione pacchetti pip: ${PIP_PACKAGES[*]}"
+        pip install --no-cache-dir "${PIP_PACKAGES[@]}"
+    else
+        log_info "Nessun pacchetto pip da installare."
     fi
 }
 
@@ -108,17 +196,18 @@ function provisioning_get_pip_packages() {
 ##############################################
 
 provisioning_update_comfyui() {
-    cd ${COMFYUI_DIR}
+    cd "${COMFYUI_DIR}"
 
-    echo "Aggiornamento ComfyUI alla versione nightly (master)..."
+    log_info "Aggiornamento ComfyUI alla versione nightly (master)..."
 
-    git fetch --all
-    git checkout master
-    git pull
+    git_with_retry "git fetch --all" git fetch --all --prune
+    git_with_retry "git checkout master" git checkout master
+    git_with_retry "git pull origin master" git pull origin master
 
+    log_info "Installazione requirements ComfyUI..."
     pip install --no-cache-dir -r requirements.txt
 
-    echo "ComfyUI aggiornato alla nightly!"
+    log_info "ComfyUI aggiornato alla nightly."
 }
 
 ##############################################
@@ -127,47 +216,70 @@ provisioning_update_comfyui() {
 
 function provisioning_get_nodes() {
     for repo in "${NODES[@]}"; do
-        dir="${repo##*/}"
-        path="${COMFYUI_DIR}/custom_nodes/${dir}"
-        requirements="${path}/requirements.txt"
+        local dir="${repo##*/}"
+        local path="${COMFYUI_DIR}/custom_nodes/${dir}"
+        local requirements="${path}/requirements.txt"
 
         if [[ -d $path ]]; then
-            if [[ ${AUTO_UPDATE,,} != "false" ]]; then
-                echo "Updating node: ${repo}"
-                ( cd "$path" && git pull )
-                [[ -e $requirements ]] && pip install --no-cache-dir -r "$requirements"
+            if [[ ${AUTO_UPDATE:-"",,} != "false" ]]; then
+                log_info "Aggiornamento nodo: ${repo}"
+                (
+                    cd "$path"
+                    git_with_retry "git pull per $dir" git pull --rebase --autostash
+                )
+                if [[ -e $requirements ]]; then
+                    log_info "Installazione requirements per nodo $dir"
+                    pip install --no-cache-dir -r "$requirements"
+                fi
+            else
+                log_info "AUTO_UPDATE=false, salto update per nodo: ${repo}"
             fi
         else
-            echo "Downloading node: ${repo}"
-            git clone "${repo}" "${path}" --recursive
-            [[ -e $requirements ]] && pip install --no-cache-dir -r "$requirements"
+            log_info "Clonazione nuovo nodo: ${repo}"
+            git_with_retry "git clone nodo $dir" git clone "${repo}" "${path}" --recursive
+            if [[ -e $requirements ]]; then
+                log_info "Installazione requirements per nodo $dir"
+                pip install --no-cache-dir -r "$requirements"
+            fi
         fi
     done
 }
 
 ##############################################
-# NUOVO: CLONAZIONE REPO HUGGINGFACE
+# REPO HUGGINGFACE (GIT)
 ##############################################
 
 function provisioning_get_hf_repos() {
-    dest="$1"
+    local dest="$1"
     shift
-    repos=("$@")
+    local repos=("$@")
 
     mkdir -p "$dest"
 
-    echo "Clonazione repository HuggingFace in $dest..."
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_info "Nessuna repo HuggingFace da clonare."
+        return 0
+    fi
+
+    log_info "Gestione repository HuggingFace in $dest..."
 
     for repo in "${repos[@]}"; do
-        name="${repo##*/}"
-        path="${dest}/${name}"
+        local name="${repo##*/}"
+        local path="${dest}/${name}"
 
         if [[ -d "$path/.git" ]]; then
-            echo "Aggiornamento repo HF: $name"
-            (cd "$path" && git pull)
+            log_info "Aggiornamento repo HF: $name"
+            (
+                cd "$path"
+                git_with_retry "git pull per HF repo $name" git pull --rebase --autostash
+            )
         else
-            echo "Clonazione repo HF: $repo"
-            GIT_LFS_SKIP_SMUDGE=1 git clone "$repo" "$path"
+            log_info "Clonazione repo HF: $repo"
+            (
+                cd "$dest"
+                # LFS skip in clonazione; se ti serve il full checkout puoi togliere la var
+                GIT_LFS_SKIP_SMUDGE=1 git_with_retry "git clone HF repo $name" git clone "$repo" "$name"
+            )
         fi
     done
 }
@@ -177,69 +289,98 @@ function provisioning_get_hf_repos() {
 ##############################################
 
 function provisioning_get_files() {
-    if [[ -z $2 ]]; then return 1; fi
+    if [[ $# -lt 2 ]]; then
+        return 0
+    fi
 
-    dir="$1"
-    mkdir -p "$dir"
+    local dir="$1"
     shift
-    arr=("$@")
+    local arr=("$@")
 
-    echo "Downloading ${#arr[@]} file(s) in $dir..."
+    if [[ ${#arr[@]} -eq 0 ]]; then
+        log_info "Nessun file da scaricare per $dir."
+        return 0
+    fi
+
+    mkdir -p "$dir"
+    log_info "Download di ${#arr[@]} file in $dir..."
 
     for url in "${arr[@]}"; do
-        echo "Downloading: $url"
+        log_info "Download file: $url"
         provisioning_download "$url" "$dir"
-        echo
     done
 }
 
 ##############################################
-# DOWNLOAD GENERICO (wget)
+# DOWNLOAD GENERICO (wget + retry, HF/Civitai aware)
 ##############################################
 
 function provisioning_download() {
-    url="$1"
-    dest="$2"
+    local url="$1"
+    local dest="$2"
 
     mkdir -p "$dest"
 
+    local auth_token=""
+    local provider="generic"
+
     if [[ $url == https://huggingface.co/* ]]; then
-        auth_token="$HF_TOKEN"
+        provider="huggingface"
+        if provisioning_has_valid_hf_token; then
+            auth_token="$HF_TOKEN"
+        else
+            log_warn "Scarico da HuggingFace senza token valido: $url"
+        fi
     elif [[ $url == https://civitai.com/* ]]; then
-        auth_token="$CIVITAI_TOKEN"
-    else
-        auth_token=""
+        provider="civitai"
+        if provisioning_has_valid_civitai_token; then
+            auth_token="$CIVITAI_TOKEN"
+        else
+            log_warn "Scarico da Civitai senza token valido: $url"
+        fi
     fi
 
-    echo "Inizio download: $url"
+    log_info "Inizio download ($provider): $url"
 
-    max_retries=3
-    attempt=1
+    local max_retries=3
+    local attempt=1
 
     while (( attempt <= max_retries )); do
-        echo "Tentativo $attempt di $max_retries..."
+        log_info "Tentativo download $attempt/$max_retries per $url"
 
         if [[ -n "$auth_token" ]]; then
-            if [[ $url == https://civitai.com/* ]]; then
-                wget --content-disposition -P "$dest" "${url}?token=${auth_token}" 2>&1
+            if [[ $provider == "civitai" ]]; then
+                wget --content-disposition \
+                     -P "$dest" \
+                     "${url}?token=${auth_token}" \
+                     2>&1
             else
-                wget --header="Authorization: Bearer $auth_token" --content-disposition -P "$dest" "$url" 2>&1
+                wget --header="Authorization: Bearer $auth_token" \
+                     --content-disposition \
+                     -P "$dest" \
+                     "$url" \
+                     2>&1
             fi
         else
-            wget --content-disposition -P "$dest" "$url" 2>&1
+            wget --content-disposition \
+                 -P "$dest" \
+                 "$url" \
+                 2>&1
         fi
 
-        if [[ $? -eq 0 ]]; then
-            echo "Download completato!"
+        local status=$?
+
+        if [[ $status -eq 0 ]]; then
+            log_info "Download completato: $url"
             return 0
         fi
 
-        echo "Download fallito, ritento..."
+        log_warn "Download fallito (exit $status) per $url, ritento..."
         sleep $((attempt * 2))
         ((attempt++))
     done
 
-    echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi"
+    log_error "Impossibile scaricare $url dopo $max_retries tentativi"
     return 1
 }
 
@@ -261,4 +402,6 @@ function provisioning_print_end() {
 
 if [[ ! -f /.noprovisioning ]]; then
     provisioning_start
+else
+    log_warn "/.noprovisioning presente, salto provisioning."
 fi
