@@ -9,6 +9,7 @@ COMFYUI_DIR=${WORKSPACE}/ComfyUI
 ##############################################
 
 APT_PACKAGES=(
+    jq
 )
 
 PIP_PACKAGES=(
@@ -165,6 +166,46 @@ function provisioning_has_valid_civitai_token() {
 }
 
 ##############################################
+# REPORT FINALE MODELLI
+##############################################
+
+provisioning_print_model_report() {
+    log_info "=== REPORT MODELLI ==="
+
+    local base="${COMFYUI_DIR}/models"
+    local valid=()
+    local invalid=()
+
+    # Cerca tutti i file .safetensors
+    while IFS= read -r file; do
+        if provisioning_validate_model_file "$file" >/dev/null 2>&1; then
+            valid+=("$file")
+        else
+            invalid+=("$file")
+        fi
+    done < <(find "$base" -type f -name "*.safetensors")
+
+    echo ""
+    log_info "Modelli validi:"
+    for f in "${valid[@]}"; do
+        echo " - ${f#$base/}"
+    done
+
+    echo ""
+    log_info "Modelli NON validi:"
+    if [[ ${#invalid[@]} -eq 0 ]]; then
+        echo " - Nessuno 🎉"
+    else
+        for f in "${invalid[@]}"; do
+            echo " - ${f#$base/}"
+        done
+    fi
+
+    echo ""
+}
+
+
+##############################################
 # FUNZIONI PRINCIPALI
 ##############################################
 
@@ -206,7 +247,7 @@ function provisioning_start() {
 
     # Repo HuggingFace come text_encoders
     provisioning_get_hf_repos "${COMFYUI_DIR}/models/text_encoders" "${HF_REPOS[@]}"
-
+    provisioning_print_model_report
     provisioning_print_end
 }
 
