@@ -25,6 +25,8 @@ NODES=(
     "https://github.com/city96/ComfyUI-GGUF"
     "https://github.com/kael558/ComfyUI-GGUF-FantasyTalking"
     "https://github.com/Lightricks/ComfyUI-LTXVideo"
+    "https://github.com/ltdrdata/ComfyUI-Impact-Pack"
+    "https://github.com/evanspearman/ComfyMath"
 )
 
 WORKFLOWS=(
