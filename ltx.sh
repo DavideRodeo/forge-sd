@@ -32,7 +32,7 @@ NODES=(
 
 # Repository HuggingFace da clonare come repo git
 HF_REPOS=(
-    "https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized"
+    ""
 )
 
 WORKFLOWS=()
@@ -43,7 +43,7 @@ CHECKPOINT_MODELS=(
 )
 
 TEXT_ENCODERS=(
-    # Vuoto: gemma3 ora è gestito tramite HF_REPOS
+    "https://civitai.com/api/download/models/2579572"
 )
 
 DIFFUSION_MODELS=()
@@ -244,6 +244,7 @@ function provisioning_start() {
     provisioning_get_files "${COMFYUI_DIR}/models/vae" "${VAE_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/esrgan" "${ESRGAN_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/latent_upscale_models" "${LATENT_UPSCALE_MODELS[@]}"
+    provisioning_get_files "${COMFYUI_DIR}/models/text_encoders" "${TEXT_ENCODERS[@]}"
 
     # Repo HuggingFace come text_encoders
     provisioning_get_hf_repos "${COMFYUI_DIR}/models/text_encoders" "${HF_REPOS[@]}"
