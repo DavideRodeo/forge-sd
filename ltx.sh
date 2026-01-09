@@ -37,7 +37,7 @@ CHECKPOINT_MODELS=(
 )
 
 TEXT_ENCODERS=(
-    "https://civitai.com/api/download/models/2579572"
+  
 )
 
 DIFFUSION_MODELS=()
@@ -47,7 +47,7 @@ LATENT_UPSCALE_MODELS=(
 )
 UNET_MODELS=()
 LORA_MODELS=(
-    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled-lora-384.safetensors"
+    
 )
 VAE_MODELS=()
 ESRGAN_MODELS=()
