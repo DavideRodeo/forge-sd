@@ -45,66 +45,64 @@ function provisioning_has_valid_civitai_token() {
 # DOWNLOAD WITH RETRY + TOKEN + FILENAME FIX
 ##############################################
 
-provisioning_download() {
-    local url="$1"
-    local dest="$2"
+function provisioning_download() {
+    url="$1"
+    dest="$2"
 
     mkdir -p "$dest"
 
-    # Estrai nome file dall’URL
-    local filename="${url##*/}"
-    local outfile="${dest}/${filename}"
-
-    local token=""
-    local provider="generic"
-
-    if [[ $url == https://huggingface.co/* ]]; then
-        provider="huggingface"
-        provisioning_has_valid_hf_token && token="$HF_TOKEN"
-    elif [[ $url == https://civitai.com/* ]]; then
-        provider="civitai"
-        provisioning_has_valid_civitai_token && token="$CIVITAI_TOKEN"
+    # Detect provider
+    if [[ $url == https://huggingface.co/* || $url == https://*.huggingface.co/* ]]; then
+        auth_token="$HF_TOKEN"
+    elif [[ $url == https://civitai.com/* || $url == https://*.civitai.com/* ]]; then
+        auth_token="$CIVITAI_TOKEN"
+    else
+        auth_token=""
     fi
 
-    log_info "Download ($provider): $url → $outfile"
+    echo "Inizio download: $url"
 
-    local max=3 attempt=1
-    while (( attempt <= max )); do
-        log_info "Tentativo $attempt/$max"
+    max_retries=3
+    attempt=1
 
-        rm -f "$outfile"
+    while (( attempt <= max_retries )); do
+        echo "Tentativo $attempt di $max_retries..."
 
-        if [[ -n "$token" ]]; then
-            if [[ $provider == "civitai" ]]; then
-                wget --quiet --show-progress \
-                     -O "$outfile" \
-                     "${url}?token=${token}"
+        if [[ -n "$auth_token" ]]; then
+            # Civitai → token nella query string (necessario per modelVersionId)
+            if [[ $url == https://civitai.com/* ]]; then
+                wget --content-disposition \
+                     -P "$dest" \
+                     "${url}?token=${auth_token}" \
+                     2>&1
             else
-                wget --quiet --show-progress \
-                     --header="Authorization: Bearer $token" \
-                     -O "$outfile" \
-                     "$url"
+                # HuggingFace → token via header
+                wget --header="Authorization: Bearer $auth_token" \
+                     --content-disposition \
+                     -P "$dest" \
+                     "$url" \
+                     2>&1
             fi
         else
-            wget --quiet --show-progress \
-                 -O "$outfile" \
-                 "$url"
+            wget --content-disposition \
+                 -P "$dest" \
+                 "$url" \
+                 2>&1
         fi
 
-        if provisioning_validate_model_file "$outfile"; then
-            log_info "Download valido: $outfile"
+        if [[ $? -eq 0 ]]; then
+            echo "Download completato!"
             return 0
         fi
 
-        log_warn "File non valido, ritento..."
+        echo "Download fallito, ritento..."
         sleep $((attempt * 2))
         ((attempt++))
     done
 
-    log_error "Download fallito: $url"
+    echo "ERRORE: impossibile scaricare $url dopo $max_retries tentativi"
     return 1
 }
-
 
 function provisioning_get_extensions() {
     dir="${FORGE_DIR}/extensions"
