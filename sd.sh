@@ -10,7 +10,7 @@ APT_PACKAGES=()
 PIP_PACKAGES=()
 
 CHECKPOINT_MODELS=(
-    ""
+    
 )
 EXTENSIONS=(
     "https://github.com/Haoming02/sd-forge-couple"
