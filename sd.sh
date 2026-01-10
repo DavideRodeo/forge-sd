@@ -10,7 +10,7 @@ APT_PACKAGES=()
 PIP_PACKAGES=()
 
 CHECKPOINT_MODELS=(
-    "https://civitai.com/api/download/models/2518501"
+    ""
 )
 EXTENSIONS=(
     "https://github.com/Haoming02/sd-forge-couple"
