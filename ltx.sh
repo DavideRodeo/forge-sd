@@ -5,67 +5,13 @@ source /venv/main/bin/activate
 COMFYUI_DIR="${WORKSPACE}/ComfyUI"
 
 ##############################################
-# CONFIGURAZIONE UTENTE
+# LOGGING AVANZATO
 ##############################################
 
-APT_INSTALL="apt-get install -y"
-APT_PACKAGES=( jq )
-PIP_PACKAGES=()
-
-NODES=(
-    "https://github.com/rgthree/rgthree-comfy"
-    "https://github.com/yolain/ComfyUI-Easy-Use"
-    "https://github.com/kijai/ComfyUI-KJNodes"
-    "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation"
-    "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
-    "https://github.com/Artificial-Sweetener/comfyui-WhiteRabbit"
-    "https://github.com/city96/ComfyUI-GGUF"
-    "https://github.com/kael558/ComfyUI-GGUF-FantasyTalking"
-    "https://github.com/Lightricks/ComfyUI-LTXVideo"
-    "https://github.com/ltdrdata/ComfyUI-Impact-Pack"
-    "https://github.com/evanspearman/ComfyMath"
-    "https://github.com/ClownsharkBatwing/RES4LYF"
-)
-
-HF_REPOS=()
-
-WORKFLOWS=()
-INPUT=()
-
-CHECKPOINT_MODELS=(
-    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev.safetensors"
-)
-
-TEXT_ENCODERS=(
-  # "https://civitai.com/api/download/models/2579572"
-)
-
-DIFFUSION_MODELS=()
-CLIP_MODELS=()
-LATENT_UPSCALE_MODELS=(
-    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors"
-)
-UNET_MODELS=()
-LORA_MODELS=(
-    # "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled-lora-384.safetensors"
-)
-VAE_MODELS=()
-ESRGAN_MODELS=()
-CONTROLNET_MODELS=()
-
-##############################################
-# LOGGING
-##############################################
-
-LOG_PREFIX="[PROVISIONING]"
-
+LOG_PREFIX="[LTX]"
 log_info()  { echo "${LOG_PREFIX} [INFO]  $*"; }
 log_warn()  { echo "${LOG_PREFIX} [WARN]  $*" >&2; }
 log_error() { echo "${LOG_PREFIX} [ERROR] $*" >&2; }
-
-##############################################
-# UTILS
-##############################################
 
 git_with_retry() {
     local desc="$1"; shift
@@ -84,32 +30,48 @@ git_with_retry() {
 }
 
 ##############################################
-# VALIDAZIONE FILE MODELLI
+# NODI DA INSTALLARE
 ##############################################
 
-provisioning_validate_model_file() {
-    local file="$1"
+NODES=(
+    "https://github.com/rgthree/rgthree-comfy"
+    "https://github.com/yolain/ComfyUI-Easy-Use"
+    "https://github.com/kijai/ComfyUI-KJNodes"
+    "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation"
+    "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
+    "https://github.com/Artificial-Sweetener/comfyui-WhiteRabbit"
+    "https://github.com/city96/ComfyUI-GGUF"
+    "https://github.com/kael558/ComfyUI-GGUF-FantasyTalking"
+    "https://github.com/Lightricks/ComfyUI-LTXVideo"
+    "https://github.com/ltdrdata/ComfyUI-Impact-Pack"
+    "https://github.com/evanspearman/ComfyMath"
+    "https://github.com/ClownsharkBatwing/RES4LYF"
+)
 
-    [[ -s "$file" ]] || { log_error "File vuoto/corrotto: $file"; return 1; }
+##############################################
+# MODELLI
+##############################################
 
-    if head -n1 "$file" | grep -q "git-lfs.github.com"; then
-        log_error "File LFS pointer: $file"
-        return 1
-    fi
+CHECKPOINT_MODELS=(
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev.safetensors"
+)
 
-    if head -n1 "$file" | grep -qi "<!DOCTYPE html"; then
-        log_error "File HTML ricevuto: $file"
-        return 1
-    fi
+LATENT_UPSCALE_MODELS=(
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors"
+)
 
-    if head -n1 "$file" | grep -q "{" && jq empty "$file" 2>/dev/null; then
-        log_error "File JSON ricevuto: $file"
-        return 1
-    fi
-
-    log_info "File valido: $file"
-    return 0
-}
+TEXT_ENCODERS=(
+    "https://civitai.com/api/download/models/2579572"
+)
+DIFFUSION_MODELS=()
+UNET_MODELS=()
+LORA_MODELS=(
+    "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled-lora-384.safetensors"
+)
+VAE_MODELS=()
+ESRGAN_MODELS=()
+CONTROLNET_MODELS=()
+CLIP_MODELS=()
 
 ##############################################
 # TOKEN CHECK
@@ -134,32 +96,51 @@ provisioning_has_valid_civitai_token() {
 }
 
 ##############################################
-# APT
+# DOWNLOAD FILE (stile default.txt)
 ##############################################
 
-provisioning_get_apt_packages() {
-    if (( ${#APT_PACKAGES[@]} > 0 )); then
-        log_info "Aggiornamento APT..."
-        sudo apt-get update -y
+provisioning_download() {
+    local url="$1"
+    local dest="$2"
 
-        log_info "Installazione pacchetti: ${APT_PACKAGES[*]}"
-        sudo $APT_INSTALL "${APT_PACKAGES[@]}"
+    mkdir -p "$dest"
+
+    local auth_token=""
+    if [[ -n $HF_TOKEN && $url =~ ^https://([a-zA-Z0-9_-]+\.)?huggingface\.co ]]; then
+        auth_token="$HF_TOKEN"
+    elif [[ -n $CIVITAI_TOKEN && $url =~ ^https://([a-zA-Z0-9_-]+\.)?civitai\.com ]]; then
+        auth_token="$CIVITAI_TOKEN"
+    fi
+
+    log_info "Download: $url"
+
+    if [[ -n $auth_token ]]; then
+        wget --header="Authorization: Bearer $auth_token" \
+             -qnc --content-disposition --show-progress \
+             -P "$dest" "$url"
     else
-        log_info "Nessun pacchetto APT richiesto."
+        wget -qnc --content-disposition --show-progress \
+             -P "$dest" "$url"
     fi
 }
 
 ##############################################
-# PIP
+# MULTI-FILE
 ##############################################
 
-provisioning_get_pip_packages() {
-    if (( ${#PIP_PACKAGES[@]} > 0 )); then
-        log_info "Installazione pacchetti pip..."
-        pip install --no-cache-dir "${PIP_PACKAGES[@]}"
-    else
-        log_info "Nessun pacchetto pip richiesto."
-    fi
+provisioning_get_files() {
+    local dest="$1"; shift
+    local arr=("$@")
+
+    (( ${#arr[@]} == 0 )) && return
+
+    mkdir -p "$dest"
+    log_info "Scarico ${#arr[@]} file in $dest"
+
+    for url in "${arr[@]}"; do
+        log_info "Scarico: $url"
+        provisioning_download "$url" "$dest"
+    done
 }
 
 ##############################################
@@ -174,134 +155,37 @@ provisioning_update_comfyui() {
     git_with_retry "git checkout master" git checkout master
     git_with_retry "git pull" git pull origin master
 
-    log_info "Installazione requirements..."
+    log_info "Reinstallazione requirements..."
     pip install --no-cache-dir -r requirements.txt
 }
 
 ##############################################
-# NODI CUSTOM
+# DOWNLOAD + UPDATE NODI
 ##############################################
 
 provisioning_get_nodes() {
-    for repo in "${NODES[@]}"; do
-        local dir="${repo##*/}"
-        local path="${COMFYUI_DIR}/custom_nodes/${dir}"
+    local nodes_dir="${COMFYUI_DIR}/custom_nodes"
+    mkdir -p "$nodes_dir"
 
-        if [[ -d "$path" ]]; then
-            log_info "Aggiornamento nodo: $dir"
-            (cd "$path" && git_with_retry "git pull $dir" git pull --rebase --autostash)
+    log_info "Gestione nodi custom (${#NODES[@]} nodi)"
+
+    for repo in "${NODES[@]}"; do
+        local name="${repo##*/}"
+        local path="${nodes_dir}/${name}"
+
+        if [[ -d "$path/.git" ]]; then
+            log_info "Aggiornamento nodo esistente: $name"
+            (cd "$path" && git_with_retry "git pull $name" git pull --rebase --autostash)
         else
-            log_info "Clonazione nodo: $repo"
-            git_with_retry "git clone $dir" git clone "$repo" "$path" --recursive
+            log_info "Clonazione nuovo nodo: $repo"
+            git_with_retry "git clone $name" git clone "$repo" "$path" --recursive
         fi
 
         if [[ -f "$path/requirements.txt" ]]; then
+            log_info "Installazione requirements per nodo: $name"
             pip install --no-cache-dir -r "$path/requirements.txt"
         fi
     done
-}
-
-##############################################
-# DOWNLOAD FILE
-##############################################
-
-provisioning_download() {
-    local url="$1"
-    local dest="$2"
-
-    mkdir -p "$dest"
-
-    local token=""
-    local provider="generic"
-
-    if [[ $url == https://huggingface.co/* ]]; then
-        provider="huggingface"
-        provisioning_has_valid_hf_token && token="$HF_TOKEN"
-    elif [[ $url == https://civitai.com/* ]]; then
-        provider="civitai"
-        provisioning_has_valid_civitai_token && token="$CIVITAI_TOKEN"
-    fi
-
-    log_info "Download ($provider): $url"
-
-    local max=3 attempt=1
-    while (( attempt <= max )); do
-        log_info "Tentativo $attempt/$max"
-
-        if [[ -n "$token" ]]; then
-            if [[ $provider == "civitai" ]]; then
-                wget --content-disposition -P "$dest" "${url}?token=${token}"
-            else
-                wget --header="Authorization: Bearer $token" --content-disposition -P "$dest" "$url"
-            fi
-        else
-            wget --content-disposition -P "$dest" "$url"
-        fi
-
-        local file
-        file=$(ls -t "$dest" | head -n1)
-
-        if provisioning_validate_model_file "$dest/$file"; then
-            log_info "Download valido: $url"
-            return 0
-        fi
-
-        log_warn "File non valido, ritento..."
-        sleep $((attempt * 2))
-        ((attempt++))
-    done
-
-    log_error "Download fallito: $url"
-    return 1
-}
-
-##############################################
-# FILE MULTIPLI
-##############################################
-
-provisioning_get_files() {
-    local dest="$1"; shift
-    local arr=("$@")
-
-    (( ${#arr[@]} == 0 )) && { log_info "Nessun file per $dest"; return; }
-
-    mkdir -p "$dest"
-    log_info "Scarico ${#arr[@]} file in $dest"
-
-    for url in "${arr[@]}"; do
-        provisioning_download "$url" "$dest"
-    done
-}
-
-##############################################
-# REPORT
-##############################################
-
-provisioning_print_model_report() {
-    log_info "=== REPORT MODELLI ==="
-
-    local base="${COMFYUI_DIR}/models"
-    local valid=() invalid=()
-
-    while IFS= read -r file; do
-        if provisioning_validate_model_file "$file" >/dev/null; then
-            valid+=("$file")
-        else
-            invalid+=("$file")
-        fi
-    done < <(find "$base" -type f -name "*.safetensors")
-
-    echo ""
-    log_info "Modelli validi:"
-    for f in "${valid[@]}"; do echo " - ${f#$base/}"; done
-
-    echo ""
-    log_info "Modelli NON validi:"
-    if (( ${#invalid[@]} == 0 )); then
-        echo " - Nessuno 🎉"
-    else
-        for f in "${invalid[@]}"; do echo " - ${f#$base/}"; done
-    fi
 }
 
 ##############################################
@@ -309,22 +193,18 @@ provisioning_print_model_report() {
 ##############################################
 
 provisioning_start() {
-    provisioning_print_header
+
+    log_info "=== INIZIO PROVISIONING LTX MINIMAL + UPDATE ==="
 
     provisioning_has_valid_hf_token && log_info "Token HF valido" || log_warn "Token HF assente"
     provisioning_has_valid_civitai_token && log_info "Token Civitai valido" || log_warn "Token Civitai assente"
 
-    provisioning_get_apt_packages
     provisioning_update_comfyui
     provisioning_get_nodes
-    provisioning_get_pip_packages
 
-    local workflows_dir="${COMFYUI_DIR}/user/default/workflows"
-    mkdir -p "$workflows_dir"
-
-    provisioning_get_files "$workflows_dir" "${WORKFLOWS[@]}"
-    provisioning_get_files "${COMFYUI_DIR}/input" "${INPUT[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/checkpoints" "${CHECKPOINT_MODELS[@]}"
+    provisioning_get_files "${COMFYUI_DIR}/models/latent_upscale_models" "${LATENT_UPSCALE_MODELS[@]}"
+    provisioning_get_files "${COMFYUI_DIR}/models/text_encoders" "${TEXT_ENCODERS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/diffusion_models" "${DIFFUSION_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/unet" "${UNET_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/lora" "${LORA_MODELS[@]}"
@@ -332,25 +212,8 @@ provisioning_start() {
     provisioning_get_files "${COMFYUI_DIR}/models/clip" "${CLIP_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/vae" "${VAE_MODELS[@]}"
     provisioning_get_files "${COMFYUI_DIR}/models/esrgan" "${ESRGAN_MODELS[@]}"
-    provisioning_get_files "${COMFYUI_DIR}/models/latent_upscale_models" "${LATENT_UPSCALE_MODELS[@]}"
-    provisioning_get_files "${COMFYUI_DIR}/models/text_encoders" "${TEXT_ENCODERS[@]}"
 
-    provisioning_print_model_report
-    provisioning_print_end
-}
-
-##############################################
-# HEADER / FOOTER
-##############################################
-
-provisioning_print_header() {
-    printf "\n##############################################\n"
-    printf "#          Provisioning container            #\n"
-    printf "##############################################\n\n"
-}
-
-provisioning_print_end() {
-    printf "\nProvisioning complete: Application will start now\n\n"
+    log_info "=== PROVISIONING COMPLETATO ==="
 }
 
 ##############################################
@@ -360,5 +223,5 @@ provisioning_print_end() {
 if [[ ! -f /.noprovisioning ]]; then
     provisioning_start
 else
-    log_warn "/.noprovisioning presente, salto provisioning."
+    log_warn "/.noprovisioning presente, provisioning saltato."
 fi
