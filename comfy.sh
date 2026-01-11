@@ -58,7 +58,7 @@ LORA_MODELS=(
 )
 
 VAE_MODELS=(
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/blob/main/split_files/vae/wan_2.1_vae.safetensors"
+    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
 )
 
 ESRGAN_MODELS=(
