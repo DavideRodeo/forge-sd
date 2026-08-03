@@ -35,14 +35,14 @@ INPUT=(
 # MiniMax H3: File Video/Audio
 CHECKPOINT_MODELS=(
     # fl2va (First/Last frame to Video)
-    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
+    #"https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
     # ref2va (Reference-driven generation) - Decommenta se necessario
-    #"https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 )
 
 # Testo Encoder: Qwen3VL 32B (necessario per l'H3)
 CLIP_MODELS=(
-    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+    "https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-MiniMax-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
 )
 
 UNET_MODELS=(
