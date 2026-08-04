@@ -1,9 +1,8 @@
-#!/bin/bash
+bash_script = """#!/bin/bash
 
 source /venv/main/bin/activate
 COMFYUI_DIR=${WORKSPACE}/ComfyUI
 
-# Aggiunto aria2 per velocizzare i download 16x
 APT_PACKAGES=(
     "aria2"
 )
@@ -28,12 +27,12 @@ INPUT=(
 
 # Modelli H3
 CHECKPOINT_MODELS=(
-    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+    "http://95.110.181.79:8080/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 )
 
 # Qwen Text Encoder
 CLIP_MODELS=(
-    "https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-MiniMax-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
+    "http://95.110.181.79:8080/text_encoders/qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
 )
 
 UNET_MODELS=(
@@ -44,8 +43,8 @@ LORA_MODELS=(
 
 # VAE
 VAE_MODELS=(
-    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_video_vae_fp16.safetensors"
-    "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_audio_vae_fp32.safetensors"
+    "http://95.110.181.79:8080/vae/minimax_h3_audio_vae_fp32.safetensors"
+    "http://95.110.181.79:8080/vae/minimax_h3_video_vae_fp16.safetensors"
 )
 
 ESRGAN_MODELS=(
@@ -64,32 +63,32 @@ function provisioning_start() {
     provisioning_get_pip_packages
     workflows_dir="${COMFYUI_DIR}/user/default/workflows"
     mkdir -p "${workflows_dir}"
-    provisioning_get_files \
-        "${workflows_dir}" \
+    provisioning_get_files \\
+        "${workflows_dir}" \\
         "${WORKFLOWS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/input" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/input" \\
         "${INPUT[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/diffusion_models" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/diffusion_models" \\
         "${CHECKPOINT_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/unet" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/unet" \\
         "${UNET_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/loras" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/loras" \\
         "${LORA_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/controlnet" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/controlnet" \\
         "${CONTROLNET_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/text_encoders" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/text_encoders" \\
         "${CLIP_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/vae" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/vae" \\
         "${VAE_MODELS[@]}"
-    provisioning_get_files \
-        "${COMFYUI_DIR}/models/upscale_models" \
+    provisioning_get_files \\
+        "${COMFYUI_DIR}/models/upscale_models" \\
         "${ESRGAN_MODELS[@]}"
     provisioning_print_end
 }
@@ -126,14 +125,14 @@ function provisioning_get_nodes() {
         requirements="${path}/requirements.txt"
         if [[ -d $path ]]; then
             if [[ ${AUTO_UPDATE,,} != "false" ]]; then
-                printf "Updating node: %s...\n" "${repo}"
+                printf "Updating node: %s...\\n" "${repo}"
                 ( cd "$path" && git pull )
                 if [[ -e $requirements ]]; then
                    pip install --no-cache-dir -r "$requirements"
                 fi
             fi
         else
-            printf "Downloading node: %s...\n" "${repo}"
+            printf "Downloading node: %s...\\n" "${repo}"
             git clone "${repo}" "${path}" --recursive
             if [[ -e $requirements ]]; then
                 pip install --no-cache-dir -r "${requirements}"
@@ -154,32 +153,30 @@ function provisioning_get_files() {
         return 0
     fi
     
-    printf "Downloading %s model(s) to %s...\n" "${#arr[@]}" "$dir"
+    printf "Downloading %s model(s) to %s...\\n" "${#arr[@]}" "$dir"
     for url in "${arr[@]}"; do
-        printf "Downloading: %s\n" "${url}"
+        printf "Downloading: %s\\n" "${url}"
         provisioning_download "${url}" "${dir}"
-        printf "\n"
+        printf "\\n"
     done
 }
 
 function provisioning_print_header() {
-    printf "\n##############################################\n#                                            #\n#          Provisioning container            #\n#                                            #\n#         This will take some time           #\n#                                            #\n# Your container will be ready on completion #\n#                                            #\n##############################################\n\n"
+    printf "\\n##############################################\\n#                                            #\\n#          Provisioning container            #\\n#                                            #\\n#         This will take some time           #\\n#                                            #\\n# Your container will be ready on completion #\\n#                                            #\\n##############################################\\n\\n"
 }
 
 function provisioning_print_end() {
-    printf "\nProvisioning complete:  Application will start now\n\n"
+    printf "\\nProvisioning complete:  Application will start now\\n\\n"
 }
 
-# La funzione modificata: usa aria2c invece di wget
 function provisioning_download() {
-    if [[ -n $HF_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?huggingface\.co(/|$|\?) ]]; then
+    if [[ -n $HF_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\\.)?huggingface\\.co(/|$|\\?) ]]; then
         auth_token="$HF_TOKEN"
     elif 
-        [[ -n $CIVITAI_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?civitai\.com(/|$|\?) ]]; then
+        [[ -n $CIVITAI_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\\.)?civitai\\.com(/|$|\\?) ]]; then
         auth_token="$CIVITAI_TOKEN"
     fi
     
-    # Estrae il nome del file dall'URL
     filename=$(basename "$1")
     
     if [[ -n $auth_token ]];then
@@ -192,3 +189,8 @@ function provisioning_download() {
 if [[ ! -f /.noprovisioning ]]; then
     provisioning_start
 fi
+"""
+
+with open("provisioning_minimax_h3.sh", "w") as f:
+    f.write(bash_script)
+print("File generated successfully.")
