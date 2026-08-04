@@ -3,11 +3,9 @@
 source /venv/main/bin/activate
 COMFYUI_DIR=${WORKSPACE}/ComfyUI
 
-# Packages are installed after nodes so we can fix them...
-
+# Aggiunto aria2 per velocizzare i download 16x
 APT_PACKAGES=(
-    #"package-1"
-    #"package-2"
+    "aria2"
 )
 
 PIP_PACKAGES=(
@@ -18,29 +16,22 @@ PIP_PACKAGES=(
     "transformers[timm]>=4.45.0"
 )
 
-# Nessun custom node strettamente necessario per l'H3 base nelle versioni recenti di ComfyUI,
-# ma puoi aggiungere VideoHelperSuite per la gestione dei file video
 NODES=(
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
 )
 
 WORKFLOWS=(
-    # Se hai un link a un workflow JSON specifico per H3, puoi inserirlo qui.
-    # Altrimenti, i workflow si trovano in Template Library > Video nell'interfaccia.
 )
 
 INPUT=(
 )
 
-# MiniMax H3: File Video/Audio
+# Modelli H3
 CHECKPOINT_MODELS=(
-    # fl2va (First/Last frame to Video)
-    #"https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
-    # ref2va (Reference-driven generation) - Decommenta se necessario
     "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 )
 
-# Testo Encoder: Qwen3VL 32B (necessario per l'H3)
+# Qwen Text Encoder
 CLIP_MODELS=(
     "https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-MiniMax-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
 )
@@ -51,7 +42,7 @@ UNET_MODELS=(
 LORA_MODELS=(
 )
 
-# VAE Models (Video e Audio)
+# VAE
 VAE_MODELS=(
     "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_video_vae_fp16.safetensors"
     "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/minimax_h3_audio_vae_fp32.safetensors"
@@ -81,7 +72,7 @@ function provisioning_start() {
         "${INPUT[@]}"
     provisioning_get_files \
         "${COMFYUI_DIR}/models/diffusion_models" \
-        "${CHECKPOINT_MODELS[@]}" # Inseriamo H3 in diffusion_models
+        "${CHECKPOINT_MODELS[@]}"
     provisioning_get_files \
         "${COMFYUI_DIR}/models/unet" \
         "${UNET_MODELS[@]}"
@@ -93,7 +84,7 @@ function provisioning_start() {
         "${CONTROLNET_MODELS[@]}"
     provisioning_get_files \
         "${COMFYUI_DIR}/models/text_encoders" \
-        "${CLIP_MODELS[@]}" # Qwen va in text_encoders (invece di clip, per le versioni recenti)
+        "${CLIP_MODELS[@]}"
     provisioning_get_files \
         "${COMFYUI_DIR}/models/vae" \
         "${VAE_MODELS[@]}"
@@ -115,17 +106,15 @@ function provisioning_get_pip_packages() {
     fi
 }
 
-# Assicuriamoci di essere almeno alla versione 0.3.34 o successiva per il supporto H3 e FP8
 provisioning_update_comfyui() {
-    required_tag="v0.3.34" # Puoi impostarlo a un tag più recente se lo desideri
+    required_tag="v0.3.34"
     cd ${COMFYUI_DIR}
     git fetch --all --tags
     current_commit=$(git rev-parse HEAD)
     required_commit=$(git rev-parse "$required_tag")
-    # Se il tag corrente è più vecchio di required_tag, aggiorniamo al ramo master o al tag richiesto
     if git merge-base --is-ancestor "$current_commit" "$required_commit"; then
         echo "Updating ComfyUI..."
-        git pull origin master # Aggiorniamo all'ultimo master per essere sicuri di avere l'integrazione H3
+        git pull origin master
         pip install --no-cache-dir -r requirements.txt
     fi
 }
@@ -161,7 +150,6 @@ function provisioning_get_files() {
     shift
     arr=("$@")
     
-    # Se l'array è vuoto, non fare nulla
     if [ ${#arr[@]} -eq 0 ]; then
         return 0
     fi
@@ -182,39 +170,7 @@ function provisioning_print_end() {
     printf "\nProvisioning complete:  Application will start now\n\n"
 }
 
-function provisioning_has_valid_hf_token() {
-    [[ -n "$HF_TOKEN" ]] || return 1
-    url="https://huggingface.co/api/whoami-v2"
-
-    response=$(curl -o /dev/null -s -w "%{http_code}" -X GET "$url" \
-        -H "Authorization: Bearer $HF_TOKEN" \
-        -H "Content-Type: application/json")
-
-    # Check if the token is valid
-    if [ "$response" -eq 200 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-function provisioning_has_valid_civitai_token() {
-    [[ -n "$CIVITAI_TOKEN" ]] || return 1
-    url="https://civitai.com/api/v1/models?hidden=1&limit=1"
-
-    response=$(curl -o /dev/null -s -w "%{http_code}" -X GET "$url" \
-        -H "Authorization: Bearer $CIVITAI_TOKEN" \
-        -H "Content-Type: application/json")
-
-    # Check if the token is valid
-    if [ "$response" -eq 200 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Download from $1 URL to $2 file path
+# La funzione modificata: usa aria2c invece di wget
 function provisioning_download() {
     if [[ -n $HF_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?huggingface\.co(/|$|\?) ]]; then
         auth_token="$HF_TOKEN"
@@ -222,14 +178,17 @@ function provisioning_download() {
         [[ -n $CIVITAI_TOKEN && $1 =~ ^https://([a-zA-Z0-9_-]+\.)?civitai\.com(/|$|\?) ]]; then
         auth_token="$CIVITAI_TOKEN"
     fi
+    
+    # Estrae il nome del file dall'URL
+    filename=$(basename "$1")
+    
     if [[ -n $auth_token ]];then
-        wget --header="Authorization: Bearer $auth_token" -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
+        aria2c --console-log-level=error -c -x 16 -s 16 -k 1M --header="Authorization: Bearer $auth_token" -d "$2" -o "$filename" "$1"
     else
-        wget -qnc --content-disposition --show-progress -e dotbytes="${3:-4M}" -P "$2" "$1"
+        aria2c --console-log-level=error -c -x 16 -s 16 -k 1M -d "$2" -o "$filename" "$1"
     fi
 }
 
-# Allow user to disable provisioning if they started with a script they didn't want
 if [[ ! -f /.noprovisioning ]]; then
     provisioning_start
 fi
