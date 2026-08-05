@@ -32,7 +32,7 @@ CHECKPOINT_MODELS=(
 
 # Qwen Text Encoder
 CLIP_MODELS=(
-    "http://95.110.181.79:8080/text_encoders/qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
+    "http://95.110.181.79:8080/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
 )
 
 UNET_MODELS=(
