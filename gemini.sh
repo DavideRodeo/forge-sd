@@ -16,12 +16,7 @@ PIP_PACKAGES=(
 )
 
 NODES=(
-    "https://github.com/rgthree/rgthree-comfy"
-    "https://github.com/kijai/ComfyUI-KJNodes"
-    "https://github.com/yolain/ComfyUI-Easy-Use"
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
-    "https://github.com/jtydhr88/ComfyUI-Workflow-Encrypt"
-    "https://github.com/kijai/ComfyUI-SolAttn_triton"
 )
 
 WORKFLOWS=(
@@ -44,7 +39,7 @@ UNET_MODELS=(
 )
 
 LORA_MODELS=(
-    "http://10.0.0.1:8080/loras/minimax_h3_turbo_4step_ckpt850.safetensors"
+    "http://95.110.181.79:8080/loras/minimax_h3_turbo_4step_ckpt850.safetensors"
 )
 
 # VAE
@@ -64,8 +59,19 @@ CONTROLNET_MODELS=(
 function provisioning_start() {
     provisioning_print_header
     provisioning_get_apt_packages
+    
+    # 1. Aggiorna ComfyUI alla versione nightly (master)
     provisioning_update_comfyui
+    
+    # 2. Scarica i nodi specificati
     provisioning_get_nodes
+    
+    # 3. Aggiorna tutti i nodi esistenti
+    provisioning_update_all_nodes
+    
+    # 4. Configura il ComfyUI-Manager
+    provisioning_configure_manager
+    
     provisioning_get_pip_packages
     workflows_dir="${COMFYUI_DIR}/user/default/workflows"
     mkdir -p "${workflows_dir}"
@@ -111,17 +117,59 @@ function provisioning_get_pip_packages() {
     fi
 }
 
-provisioning_update_comfyui() {
-    required_tag="v0.3.34"
-    cd ${COMFYUI_DIR}
-    git fetch --all --tags
-    current_commit=$(git rev-parse HEAD)
-    required_commit=$(git rev-parse "$required_tag")
-    if git merge-base --is-ancestor "$current_commit" "$required_commit"; then
-        echo "Updating ComfyUI..."
-        git pull origin master
-        pip install --no-cache-dir -r requirements.txt
-    fi
+# Modificata per forzare sempre l'ultima versione disponibile (Nightly)
+function provisioning_update_comfyui() {
+    printf "Updating ComfyUI to latest (nightly)...\n"
+    cd "${COMFYUI_DIR}"
+    git fetch --all
+    # Assicurati di essere sul ramo master e tira le ultime modifiche
+    git checkout master || git checkout main
+    git pull
+    pip install --no-cache-dir -r requirements.txt
+}
+
+# Nuova funzione: Aggiorna tutti i nodi custom preesistenti
+function provisioning_update_all_nodes() {
+    printf "Updating all existing custom nodes to their latest versions...\n"
+    for dir in "${COMFYUI_DIR}/custom_nodes"/*/; do
+        if [ -d "${dir}.git" ]; then
+            printf "Updating node: %s\n" "$(basename "${dir}")"
+            ( cd "${dir}" && git pull )
+            if [ -f "${dir}requirements.txt" ]; then
+                pip install --no-cache-dir -r "${dir}requirements.txt"
+            fi
+        fi
+    done
+}
+
+# Nuova funzione: Inserisce il config.ini di ComfyUI-Manager
+function provisioning_configure_manager() {
+    printf "Configuring ComfyUI-Manager...\n"
+    local manager_dir="${COMFYUI_DIR}/user/__manager"
+    mkdir -p "${manager_dir}"
+    
+    # Crea il config.ini
+    cat << 'EOF' > "${manager_dir}/config.ini"
+[default]
+preview_method = none
+git_exe = 
+use_uv = False
+channel_url = https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main
+share_option = all
+bypass_ssl = False
+file_logging = True
+component_policy = workflow
+update_policy = nightly-comfyui
+windows_selector_event_loop_policy = False
+model_download_by_agent = False
+downgrade_blacklist = 
+security_level = weak
+always_lazy_install = False
+network_mode = public
+db_mode = cache
+allow_git_url_install = True
+allow_pip_install = True
+EOF
 }
 
 function provisioning_get_nodes() {
