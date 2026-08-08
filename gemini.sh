@@ -39,6 +39,7 @@ UNET_MODELS=(
 )
 
 LORA_MODELS=(
+    "http://10.0.0.1:8080/loras/minimax_h3_turbo_4step_ckpt850.safetensors"
 )
 
 # VAE
