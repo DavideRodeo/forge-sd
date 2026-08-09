@@ -46,6 +46,7 @@ UNET_MODELS=(
 
 LORA_MODELS=(
     "http://95.110.181.79:8080/loras/minimax_h3_turbo_v4_step600_ema.safetensors"
+    "http://95.110.181.79:8080/loras/chasing_blowjob_minimaxh3_v1.2.safetensors"
 )
 
 # VAE
