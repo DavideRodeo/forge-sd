@@ -22,6 +22,7 @@ NODES=(
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
     "https://github.com/jtydhr88/ComfyUI-Workflow-Encrypt"
     "https://github.com/kijai/ComfyUI-SolAttn_triton"
+    "https://github.com/Larryvrh/ComfyUI-MiniMax-H3-Turbo"
 )
 
 WORKFLOWS=(
