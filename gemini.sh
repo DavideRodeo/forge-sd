@@ -17,6 +17,7 @@ PIP_PACKAGES=(
 
 NODES=(
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
+    "https://github.com/kijai/ComfyUI-SolAttn_triton"
 )
 
 WORKFLOWS=(
