@@ -16,7 +16,11 @@ PIP_PACKAGES=(
 )
 
 NODES=(
+    "https://github.com/rgthree/rgthree-comfy"
+    "https://github.com/kijai/ComfyUI-KJNodes"
+    "https://github.com/yolain/ComfyUI-Easy-Use"
     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
+    "https://github.com/jtydhr88/ComfyUI-Workflow-Encrypt"
     "https://github.com/kijai/ComfyUI-SolAttn_triton"
 )
 
